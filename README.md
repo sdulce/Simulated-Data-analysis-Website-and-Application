@@ -1,1 +1,1 @@
-# Simulated-Data-analysis-Website-and-Application
+# Simulated Data Analysis, Website, and Functioning Application
