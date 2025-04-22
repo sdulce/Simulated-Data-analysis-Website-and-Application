@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Apple Sales Dashboard</title>
+
+    <!-- Bootstrap CDN -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- PapaParse CDN for CSV parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">📊 Apple Sales & Store Performance Dashboard</h2>
+
+    <!-- ROW 1 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="chart-container">
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 3 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <canvas id="scatterChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- ROW 4 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="chart-container">
+                <canvas id="regionChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function loadCSVData(filePath, callback) {
+        Papa.parse(filePath, {
+            download: true,
+            header: true,
+            dynamicTyping: true,
+            complete: function(results) {
+                callback(results.data);
+            },
+            error: function(error) {
+                console.error('CSV load error:', error);
+            }
+        });
+    }
+
+    function createChart(chartId, chartType, chartData) {
+        const ctx = document.getElementById(chartId).getContext('2d');
+        new Chart(ctx, {
+            type: chartType,
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: getChartTitle(chartId),
+                        font: { size: 20 }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: getChartScales(chartId, chartType)
+            }
+        });
+    }
+
+    function getChartTitle(chartId) {
+        switch (chartId) {
+            case 'barChart': return 'Monthly Units Sold per Product';
+            case 'lineChart': return 'Monthly Sales Trend';
+            case 'pieChart': return 'Customer Review Distribution';
+            case 'scatterChart': return 'Store Revenue vs. Avg Product Price';
+            case 'regionChart': return 'Total Revenue by Region';
+            default: return '';
+        }
+    }
+
+    function getChartScales(chartId, chartType) {
+        if (chartType === 'pie') return {}; // Pie has no axes
+
+        switch (chartId) {
+            case 'barChart':
+                return {
+                    x: { title: { display: true, text: 'Month' } },
+                    y: { title: { display: true, text: 'Units Sold' } }
+                };
+            case 'lineChart':
+                return {
+                    x: { title: { display: true, text: 'Month' } },
+                    y: { title: { display: true, text: 'Sales Index' } }
+                };
+            case 'scatterChart':
+                return {
+                    x: { title: { display: true, text: 'Avg Product Price ($)' } },
+                    y: { title: { display: true, text: 'Revenue ($M)' } }
+                };
+            case 'regionChart':
+                return {
+                    x: { title: { display: true, text: 'Region' } },
+                    y: { title: { display: true, text: 'Revenue ($M)' } }
+                };
+            default:
+                return {};
+        }
+    }
+
+    function getRandomColor() {
+        return `#${Math.floor(Math.random()*16777215).toString(16)}`;
+    }
+
+    function prepareBarChartData(data) {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const products = ['iPhone 16', 'MacBook Pro', 'iPad', 'Apple Watch'];
+        const monthlySales = {};
+
+        products.forEach(p => monthlySales[p] = Array(12).fill(0));
+
+        data.forEach(entry => {
+            const product = entry.Product;
+            const monthIndex = months.indexOf(entry.Month);
+            if (product in monthlySales && monthIndex !== -1) {
+                monthlySales[product][monthIndex] += entry['Units Sold'];
+            }
+        });
+
+        const chartData = {
+            labels: months,
+            datasets: products.map(product => ({
+                label: product,
+                data: monthlySales[product],
+                backgroundColor: getRandomColor()
+            }))
+        };
+
+        createChart('barChart', 'bar', chartData);
+    }
+
+    function prepareLineChartData(data) {
+        const months = data.map(d => d.Month);
+        let value = 100;
+        const values = months.map(() => value += Math.floor(Math.random() * 30));
+
+        const chartData = {
+            labels: months,
+            datasets: [{
+                label: 'Sales Trend',
+                data: values,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0,123,255,0.1)',
+                fill: true
+            }]
+        };
+
+        createChart('lineChart', 'line', chartData);
+    }
+
+    function preparePieChartData(data) {
+    const ratingsCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+    data.forEach(entry => {
+        const rating = entry.Rating;
+        if (ratingsCount.hasOwnProperty(rating)) {
+            ratingsCount[rating]++;
+        }
+    });
+
+    const chartData = {
+        labels: ['1 Star', '2 Stars', '3 Stars', '4 Stars', '5 Stars'],
+        datasets: [{
+            label: 'Customer Reviews',
+            data: Object.values(ratingsCount),
+            backgroundColor: ['#e74c3c', '#f39c12', '#f1c40f', '#2ecc71', '#3498db']
+        }]
+    };
+
+    createChart('pieChart', 'pie', chartData);
+}
+
+
+    function prepareScatterChartData(data) {
+        const points = data.map(entry => ({
+            x: entry['Avg Product Price ($)'],
+            y: entry['Revenue ($M)']
+        }));
+
+        const chartData = {
+            datasets: [{
+                label: 'Revenue vs Price',
+                data: points,
+                backgroundColor: '#28a745'
+            }]
+        };
+
+        createChart('scatterChart', 'scatter', chartData);
+    }
+
+    function prepareRegionChartData(data) {
+    const regionTotals = {};
+
+    data.forEach(entry => {
+        const region = entry.Region;
+        const revenue = parseFloat(entry['Revenue ($M)']);
+
+        // Ignore undefined or empty regions
+        if (region && revenue && !isNaN(revenue)) {
+            if (!regionTotals[region]) {
+                regionTotals[region] = 0;
+            }
+            regionTotals[region] += revenue;
+        }
+    });
+
+    const labels = Object.keys(regionTotals);
+    const values = Object.values(regionTotals);
+
+    const chartData = {
+        labels,
+        datasets: [{
+            label: 'Total Revenue by Region ($M)',
+            data: values,
+            backgroundColor: ['#3498db', '#2ecc71', '#f1c40f', '#e67e22', '#9b59b6']
+        }]
+    };
+
+    createChart('regionChart', 'bar', chartData);
+}
+
+
+
+    // Load all charts on page load
+    window.onload = function() {
+        loadCSVData('product_sales.csv', prepareBarChartData);
+        loadCSVData('sales_trends.csv', prepareLineChartData);
+        loadCSVData('customer_reviews.csv', preparePieChartData);
+        loadCSVData('store_revenue_vs_pricing.csv', prepareScatterChartData);
+        loadCSVData('revenue_by_region.csv', prepareRegionChartData);
+    };
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
